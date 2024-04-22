@@ -46,13 +46,14 @@ class MPS:
                     #payloadByteArrayLen = self.readBytes[3]
                     #messageID = self.readBytes[4]
                     self.readBytesHasHeader = True
-            else:
-                # Search for header and drop bytes before it
-                header_index = self.readBytes.find(bytes([ord('$'), ord('M'), ord('<')]))
-                if header_index != -1:
-                    self.readBytes = self.readBytes[header_index:]
-                    self.readBytesHasHeader = True
-                return
+                else:
+                    # Search for header and drop bytes before it
+                    # This situation should normally not occur - It means a packet was dropped
+                    header_index = self.readBytes.find(bytes([ord('$'), ord('M'), ord('<')]))
+                    if header_index != -1:
+                        self.readBytes = self.readBytes[header_index:]
+                        self.readBytesHasHeader = True
+                    return
         else:
             payloadByteArrayLen = self.header[3]
             if (len(self.readBytes) >= 5 + payloadByteArrayLen + 1):
@@ -66,4 +67,3 @@ class MPS:
                     print("Checksum error")
                 self.readBytes = self.readBytes[5 + payloadByteArrayLen + 1:]
             self.readBytesHasHeader = False
-

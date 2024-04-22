@@ -1,8 +1,6 @@
 class SbusPacket:
     def __init__(self):
-        self.ch = [0] * 16
-        self.ch17 = 0
-        self.ch18 = 0
+        self.ch = [0] * 18
         self.lost_frame = 0
         self.failsafe = 0
 

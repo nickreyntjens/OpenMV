@@ -1,37 +1,44 @@
-// source: https://github.com/bolderflight/sbus/blob/main/src/sbus.cpp
+# source: https://github.com/bolderflight/sbus/blob/main/src/sbus.cpp
 from sbus_constants import PAYLOAD_LEN_, HEADER_LEN_, FOOTER_LEN_, NUM_SBUS_CH_, HEADER_, FOOTER_, FOOTER2_, CH17_MASK_, CH18_MASK_, LOST_FRAME_MASK_, FAILSAFE_MASK_
 from pyb import UART
 
 class SbusRx:
-    def __init__(self, uartPin):
+    def __init__(self, uart):
         self.state_ = 0
-        self.prev_byte__ = 0
+        self.prev_byte_ = 0
         self.buf_ = [0] * 25
-        self.uart_ = UART(3, 9600, timeout_char=1000)                         # init with given baudrate
-        self.uart_.init(9600, bits=8, parity=None, stop=2, timeout_char=1000) # init with given parameters
+        self.uart_ = uart
 
-
-    def readLatest(self, sbusPacket):
+    def read_latest(self, sbusPacket):
         # Read through all available packets to get the newest
         new_sbusPacket_ = False
-        while self.uart_.available():
-            if self.Parse(sbusPacket):
+        while self.uart_.any():
+            print("Reading")
+            if self.parse(sbusPacket):
                 new_sbusPacket_ = True
         return new_sbusPacket_
 
     def parse(self, sbusPacket):
-        while self.uart.available():
-            cur_byte = self.uart_.read()
+        while self.uart_.any():
+            print("Reading available")
+            cur_byte = self.uart_.read(1)[0]
+            print('got byte', cur_byte)
+            # intv = int.from_bytes(cur_byte, byteorder='little', signed=False)
+            # print('got int', intv)
             if self.state_ == 0:
                 if (cur_byte == HEADER_) and ((self.prev_byte_ == FOOTER_) or ((self.prev_byte_ & 0x0F) == FOOTER2_)):
+                    print("header found")
                     self.buf_[self.state_] = cur_byte
                     self.state_ += 1
                 else:
+                    print("header not found - skipping")
                     self.state_ = 0
             elif self.state_ < PAYLOAD_LEN_ + HEADER_LEN_:
+                print("filling buff")
                 self.buf_[self.state_] = cur_byte
                 self.state_ += 1
             elif self.state_ < PAYLOAD_LEN_ + HEADER_LEN_ + FOOTER_LEN_:
+                print("almost parsing buff")
                 self.state_ = 0
                 self.prev_byte_ = cur_byte
                 if (cur_byte == FOOTER_) or ((cur_byte & 0x0F) == FOOTER2_):
@@ -45,6 +52,7 @@ class SbusRx:
         return False
 
     def parse_buffer(self, sbusPacket):
+        print("Parsing buffer")
         buf_ = self.buf_
 
         # Grab the channel sbusPacket
@@ -64,8 +72,8 @@ class SbusRx:
         sbusPacket.ch[13] = int.from_bytes([(buf_[18] >> 7) | (buf_[19] << 1) | ((buf_[20] << 9) & 0x07FF)], byteorder='little', signed=False)
         sbusPacket.ch[14] = int.from_bytes([(buf_[20] >> 2) | (buf_[21] << 6) & 0x07FF], byteorder='little', signed=False)
         sbusPacket.ch[15] = int.from_bytes([(buf_[21] >> 5) | (buf_[22] << 3) & 0x07FF], byteorder='little', signed=False)
-        sbusPacket.ch17 = buf_[23] & CH17_MASK_
-        sbusPacket.ch18 = buf_[23] & CH18_MASK_
-        sbusPacket.lost_frame = buf_[23] & LOST_FRAME_MASK_
-        sbusPacket.failsafe = buf_[23] & FAILSAFE_MASK_
+        #sbusPacket.ch[16] = buf_[23] & 0x0001
+        #sbusPacket.ch[17] = buf_[23] & 0x0002
+        #sbusPacket.lost_frame = buf_[23] & LOST_FRAME_MASK_
+        #sbusPacket.failsafe = buf_[23] & FAILSAFE_MASK_
         return True

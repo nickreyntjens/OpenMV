@@ -1,19 +1,20 @@
-// source: https://github.com/bolderflight/sbus/blob/main/src/sbus.cpp
+# source: https://github.com/bolderflight/sbus/blob/main/src/sbus.cpp
 from sbus_constants import PAYLOAD_LEN_, HEADER_LEN_, FOOTER_LEN_, NUM_SBUS_CH_, HEADER_, FOOTER_, FOOTER2_, CH17_MASK_, CH18_MASK_, LOST_FRAME_MASK_, FAILSAFE_MASK_
 from pyb import UART
 
 class SbusTx:
-    def __init__(self, uartPin):
-        self.buf_ = [0] * 25
-        self.uart_ = UART(3, 9600, timeout_char=1000)                         # init with given baudrate
-        self.uart_.init(9600, bits=8, parity=None, stop=2, timeout_char=1000) # init with given parameters
+    def __init__(self, uart):
+        print('initializing sbus tx')
+        self.buf_ = bytearray(25)
+        self.uart_ = uart
 
-    def send(self, sbusPacket):
-        dataToBuff(sbusPacket, self.buf_)
-        self.uart_.write(self.buf_)
+    def send(self, sbus_packet):
+        self.data_to_buff(sbus_packet, self.buf_)
+        b = bytes(self.buf_)
+        print('sending bytes', b)
+        self.uart_.write(b)
 
-    def dataToBuff(data_, buf_):
-        buf_ = bytearray(25)  # Assuming buf_ is a bytearray or a list
+    def data_to_buff(self, data_, buf_):
         buf_[0] = HEADER_
         buf_[1] = (data_.ch[0] & 0x07FF)
         buf_[2] = (data_.ch[0] & 0x07FF) >> 8 | (data_.ch[1] & 0x07FF) << 3
@@ -37,5 +38,5 @@ class SbusTx:
         buf_[20] = (data_.ch[13] & 0x07FF) >> 9 | (data_.ch[14] & 0x07FF) << 2
         buf_[21] = (data_.ch[14] & 0x07FF) >> 6 | (data_.ch[15] & 0x07FF) << 5
         buf_[22] = (data_.ch[15] & 0x07FF) >> 3
-        buf_[23] = 0x00 | (data_.ch[17] * CH17_MASK_) | (data_.ch[18] * CH18_MASK_) | (data_.failsafe * FAILSAFE_MASK_) | (data_.lost_frame * LOST_FRAME_MASK_)
+        # buf_[23] = 0x00 | (data_.ch[17] * CH17_MASK_) | (data_.ch[18] * CH18_MASK_) | (data_.failsafe * FAILSAFE_MASK_) | (data_.lost_frame * LOST_FRAME_MASK_)
         buf_[24] = FOOTER_
