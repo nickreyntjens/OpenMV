@@ -4,6 +4,7 @@
 #
 
 import time
+import pyb
 from pyb import UART
 from stm import mem32
 
@@ -27,7 +28,9 @@ def blink():
 # inverted serial logic with a baud rate of 100000, 8 data bits,
 # even parity, and 2 stop bits
 # https://docs.openmv.io/library/machine.UART.html
-baud=115200
+baud=115200 # +- 100 bit per millisecond - sbus is 25 * 8 = 200 bits ... so take 2 milliseconds
+            # so 1ms silence, 2 ms signal, 1 ms silence, 2 ms signal, 1 ms silence, 2 ms signal, 1 ms silence, 2 ms signal
+            # is a realistic signal
 uart = UART(1, baud, timeout_char=1000) # UART.INV_TX
 uart.init(baud, bits=8, parity=0, stop=2, timeout_char=3, read_buf_len=250) # , invert=True init with given parameters
 
@@ -46,42 +49,25 @@ uart.init(baud, bits=8, parity=0, stop=2, timeout_char=3, read_buf_len=250) # , 
 # 0x40007800 - 0x40007BFF UART7 Section 48.8: USART registers
 # 0x40007C00 - 0x40007FFF UART8 Section 48.8: USART registers
 
-#base_address = 0x40011000
-#mem32[base_address + 0x4] = mem32[base_address + 0x4] | (0x3 << 16) # TX and RX pin inversion  # set rx inverted.
+base_address = 0x40011000
+mem32[base_address + 0x4] = mem32[base_address + 0x4] | (0x3 << 16) # TX and RX pin inversion  # set rx inverted.
 
-import pyb
+send_tx = True
 
-def update_rx_data(timRx):
-    global update_rx
-    global update_tx
-    update_tx = True
-    update_rx = True
-
-def update_tx_data(timRx):
-    global update_tx
-    update_tx = True
-
-
-
-updateLed = False
-update_rx = False
-led = pyb.LED(4)
-
-# Init the SBUS driver on UART port 3
-sbus = SBUSReceiver(3)
+def send_tx_data(timer):
+    global send_tx
+    print('in timer')
+    send_tx = True
 
 # Init Rx Timing at 300us (Frsky specific)
-timRx = pyb.Timer(2)
-timRx.init(freq=2778)
-timRx.callback(update_rx_data)
-
+timTx = pyb.Timer(2)
+timTx.init(period=50, callback=send_tx_data) # every 3ms
 
 def main0():
     print('c')
     clock = time.clock()  # Create a clock object to track the FPS.
 
-    update_rx = False
-    update_tx = False
+
 
     sbusTx = SbusTx(uart)
     sbusRx = SbusRx(uart)
@@ -108,12 +94,11 @@ def main0():
             sbusPacket.ch[1] = 1810
 
         blink()
-        # sbusPacket.ch[0] = 179
-        if update_rx:
-            update_rx = False
-            sbus.get_new_data()
-            print('recieved', sbus.get_rx_channels())
-
-        if update_tx:
-            update_tx = False
+        if send_tx:
             sbusTx.send(sbusPacket)
+            send_tx = False
+        print('in loop ', send_tx)
+
+        # sbusReciever2.get_new_data()
+        # print('recieved', sbus.get_rx_channels())
+

@@ -10,7 +10,7 @@ class SbusTx:
 
     def send(self, sbus_packet):
         self.data_to_buff(sbus_packet, self.buf_)
-        b = bytes(self.buf_)
+        b = bytes(self.buf_) # likely remove
         print('sending bytes', b)
         self.uart_.write(b)
 

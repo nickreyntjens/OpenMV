@@ -26,6 +26,9 @@ class SBUSReceiver:
     def __init__(self, uart):
         self.uart = uart
         self.sbus = uart
+        has_data = self.sbus.any()
+        if has_data:
+            self.sbus.read(has_data)
         #self.sbus = UART(uart_port, 100000)
         #self.sbus.init(100000, bits=8, parity=0, stop=2, timeout_char=3, read_buf_len=250)
 
@@ -171,7 +174,8 @@ class SBUSReceiver:
         if self.isSync:
             if self.sbus.any() >= self.SBUS_FRAME_LEN:
                 print("Reading Frame ...")
-                self.sbus.readinto(self.sbusFrame, self.SBUS_FRAME_LEN)  # read the whole frame
+                readNrBytes = self.sbus.readinto(self.sbusFrame, self.SBUS_FRAME_LEN)  # read the whole frame
+                print("Frame Read", readNrBytes , self.sbusFrame)
                 if (self.sbusFrame[0] == 15 and self.sbusFrame[
                     self.SBUS_FRAME_LEN - 1] == 0):  # TODO: Change to use constant var value
                     self.validSbusFrame += 1

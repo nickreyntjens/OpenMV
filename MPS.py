@@ -1,5 +1,5 @@
-// source: https://github.com/fdivitto/MSP/blob/master/MSP.cpp
-// http://www.multiwii.com/wiki/index.php?title=Multiwii_Serial_Protocol
+# source: https://github.com/fdivitto/MSP/blob/master/MSP.cpp
+# http://www.multiwii.com/wiki/index.php?title=Multiwii_Serial_Protocol
 
 class MPS:
     def __init__(self, uartNr):
@@ -27,7 +27,7 @@ class MPS:
         for i in range(payloadByteArrayLen):
             checksum ^= payloadByteArray[i]
         b1 = bytes([ord('$'), ord('M'), ord('<'), payloadByteArrayLen, messageID])
-        self.uartTx_.write(b1 + payloadByteArray + bytes([checksum])
+        self.uartTx_.write(b1 + payloadByteArray + bytes([checksum]))
 
     def fillReplyBuffer(self):
         self.pollIncomingMessages()
