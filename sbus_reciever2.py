@@ -55,13 +55,14 @@ class SBUSReceiver:
         self.channels = [0] * (16 + 2 + 2) # 16 channels + 2 digital channels + 2 fail safes
         self.readBytes = bytearray()
         self.lastFrame = bytearray()
-        self.last_frame_received = none
+        self.last_frame_received_ticks_ms = none
         self.invalidFrames = 0
 
         # add time or interrupt to prove for first byte of frame
-        probe_bound = functools.partial(self.probe, self)
+        poll_data_bound = functools.partial(self.poll_data, self)
         timProve = pyb.Timer(2)
-        timProve.init(period=3, callback=probe_bound)  # every 3ms
+        timProve.init(period=1, callback=poll_data_bound)  # every 1ms
+
 
 
     def decode_frame(self, frame):
@@ -107,14 +108,14 @@ class SBUSReceiver:
         self.decode_frame(self.lastFrame)
         return self.channels
 
-    def probe(self): # must be called every millisecond
+    def poll_data(self): # must be called every 1 millisecond
         if self.uart.any() > 0:
             self.readBytes += self.uart.read()
-            self.last_data_recieved_at = time.time_ns()
+            self.last_frame_received_ticks_ms = time.ticks_ms()
             if self.readBytes[0] == 0x0F and self.readBytes[24] == 0x00:
                 self.lastFrame = self.readBytes
                 self.readBytes = bytearray()
-        if time.time_ns() - self.last_data_recieved_at > 3000000:
+        if time.ticks_diff(time.time_ms(), self.last_frame_received_ticks_ms) > 3:
             # Clear buffer if no data received for 3 ms
             # SBUS is expected to come in frames, and then silence
             # 3ms of data, 6ms of silence, 3ms of data, 6ms of silence, ...
