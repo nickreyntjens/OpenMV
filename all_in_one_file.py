@@ -29,6 +29,27 @@ def partial_method(method, instance, *args):
         return method(instance, *args, *args2)
     return wrapper
 
+
+# SBUS protocol structure of one frame
+# 1 start byte 0x0F           (1 byte)
+# 16 channels of 11 bits each (22 bytes --- 176 bits)
+# 4 flags                     (1 byte)
+# 1 end byte 0x00             (1 byte)
+# => 25 bytes
+
+# UART settings:    100000 baudrate, 8 data bits, even parity, 2 stop bits; or
+#                   115200 baudrate, 8 data bits, even parity, 2 stop bits
+#                   (unclear which one is correct --- flight controller of the drone has option 115200 baudrate, and not 100000 baudrate)
+
+# https://www.youtube.com/watch?v=CULas2y_sXI&t=69s
+# signal comes in packets: 3ms, 6ms, 3ms, 6ms, 3ms, 6ms ... 3ms, 6ms
+# 3ms => signal in uart (in this time period the 25 bytes are sent)
+# 6ms => no signal in uart (in this time period no bytes are sent, the uart is kept cosntant at 0V or +3.3V (or +5.0V))
+
+# https://www.youtube.com/watch?v=IqLUHj7nJhI&t=9m20s
+### => Frsky  ... uart is 0V               when no signal
+### => Futaba ... uart is +3.3V (or +5.0v) when no signal
+
 class SBUSReceiver:
     def __init__(self, uart):
         self.uart = uart
