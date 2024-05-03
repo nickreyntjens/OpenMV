@@ -64,6 +64,10 @@ class SBUSReceiver:
         self.last_frame_received_ticks_ms = None
         self.invalidFrames = 0
 
+        self.readBuff = bytearray(25)
+        self.allBuff = bytearray(250)
+        self.allBuffWriteOffset = 0
+
         # add time or interrupt to prove for first byte of frame
         poll_data_bound = partial_method(self.poll_data, self)
         timProve = pyb.Timer(2)
@@ -116,16 +120,20 @@ class SBUSReceiver:
 
     def poll_data(self): # must be called every 1 millisecond
         if self.uart.any() > 0:
-            self.readBytes += self.uart.read()
+            read = self.uart.readInto(self.readBuff)
+            for i in range(read):
+                self.allBuff[self.allBuffWriteOffset + i] = self.readBuff[i]
+            self.allBuffWriteOffset += read
             self.last_frame_received_ticks_ms = time.ticks_ms()
-            if self.readBytes[0] == 0x0F and self.readBytes[24] == 0x00:
-                self.lastFrame = self.readBytes
-                self.readBytes = bytearray()
+            if self.allBuffWriteOffset >= 25 and self.allBuffWriteOffset[0] == 0x0F and self.allBuffWriteOffset[24] == 0x00:
+                for i in range(25):
+                    self.lastFrame[i] = self.allBuff[i]
+                self.allBuffWriteOffset = 0
         if self.last_frame_received_ticks_ms is None or time.ticks_diff(time.time_ms(), self.last_frame_received_ticks_ms) > 3:
             # Clear buffer if no data received for 3 ms
             # SBUS is expected to come in frames, and then silence
             # 3ms of data, 6ms of silence, 3ms of data, 6ms of silence, ...
-            self.readBytes = bytearray()
+            self.allBuffWriteOffset = 0
 
 class SBUSTransmitter:
     def __init__(self, uart):
